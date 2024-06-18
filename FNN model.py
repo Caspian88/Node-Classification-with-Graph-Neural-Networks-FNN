@@ -76,6 +76,70 @@ def run_experiment(model, x_train, y_train):
         loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
         metrics=[keras.metrics.SparseCategoricalAccuracy(name="acc")],
     )
+
+    def init_params():
+    w1 = np.random.randn(10, 784) - 0.5
+    b1 = np.random.randn(10, 1) - 0.5
+    w2 = np.random.randn(10, 10) - 0.5
+    b2 = np.random.randn(10, 1) - 0.5
+
+    def ReLU(Z):
+        return np.maximum(0, Z)
+    
+def softmax(Z):
+    return exp (Z) / np.sum(exp(Z))
+
+    def forwaed_prop(w1, b1, w2, b2, x):
+        Z1 = w1.dot(x) + b1
+        A1 = ReLU(Z1)
+        Z2 = w2.dot(A1) + b2
+        A2 = softmax(A1)
+        return Z1, A1, Z2, A2
+    
+def one_hot(Y):
+    one_hot_Y = np.zeros((Y.size, Y.max() + 1))
+    one_hot_Y[np.arange(Y.size) , Y] = 1
+    one_hot_Y = one_hot_Y
+    return one_hot_Y
+
+def deriv_ReLU(Z):
+    return Z > 0
+
+def back_prop(Z1, A1, Z2, A2, w2, X, Y):
+    m = Y.size
+    one_hot_Y = one_hot(Y)
+    dZ2 = A2 - one_hot_Y
+    dw2 = 1 / m * dZ2.dot(A1.T)
+    db2 = 1 / m * np.sum(dZ2, 2)
+    dZ1 = w2.T.dot(dZ2) * deriv_ReLU(Z1)
+    dw1 = 1 / m * dZ1.dot(X.T)
+    db1 = 1 / m * np.sum(dZ1, 2)
+    return dw1, db1, dw2, db2
+
+def update_params(w1, b1, w2, b2, dw1, db1, dw2, db2, alpha):
+    w1 = w1 - alpha * dw1
+    b1 = b1 - alpha * db1
+    w2 = w2 - alpha * dw2
+    b2 = b2 - alpha * db2
+    return w1, b1, w2, b2
+
+def get_apredictions(A2):
+    return np.argmax(A2, 0)
+
+def get_accuracy(predictions, Y):
+    print(predictions, Y)
+    return np.sum(predictions == Y) / Y.size
+
+def gradient_descent(X, Y, iterations, alpha):
+    w1, b1, w2, b2 = init_params()
+    for i in range(iterations):
+        Z1, A1, Z2, A2 = forward_prop(w1, b1, w2, b2, X)
+        dw1, db1, dw2, db2 = update_params(w1, b1, w2, b2, dw1, db1, dw2, db2, alpha)
+        if (i % 10 == 0):
+            print("Iteration:", i)
+            print("Accuracy:", get_accuracy(get_predictions(A2), Y))
+    return w1, b1, w2, b2
+
     # Create an early stopping callback.
     early_stopping = keras.callbacks.EarlyStopping(
         monitor="val_acc", patience=50, restore_best_weights=True
